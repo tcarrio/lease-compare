@@ -5,43 +5,40 @@ import (
   "log"
   "encoding/csv"
   "os"
+//  "strings"
 )
 
 // remove index from slice by swapping element i with last index,
 // then returning slice of everything but last index (what was at i) 
-func remove(s []int, i int) []int {
+func remove(s [][]string, i int) [][]string {
     s[len(s)-1], s[i] = s[i], s[len(s)-1]
     return s[:len(s)-1]
 }
 
-func main() {
-  // get files
-  
-  // get lease list
-  fmt.Print("Please enter the file path of the lease csv: ")
-  var lease_name string
-  _, lerr := fmt.Scanln(&lease_name)
+func prompt_for_file(msg string) (*os.File){
+  fmt.Print(msg)
+  var tname string
+  _, lerr := fmt.Scanln(&tname)
   if lerr != nil {
     log.Fatal(lerr)
   }
-
-  lease_file, err := os.Open(lease_name)
-  if err != nil {
-    log.Fatal(err)
-  } 
-
-  // get asset list
-  fmt.Print("Please enter the file path of the asset csv: ")
-  var asset_name string
-  _, aerr := fmt.Scanln(&asset_name)
-  if aerr != nil {
-    log.Fatal(aerr)
-  }
-
-  asset_file, err := os.Open(asset_name)
+  tfile, err := os.Open(tname)
   if err != nil {
     log.Fatal(err)
   }
+  return tfile
+}
+
+
+
+func main() {
+  type FoundAsset struct {
+    location string
+    full_serial string
+  }
+  // get lease list
+  lease_file := prompt_for_file("Please enter the file path of the lease csv: ")
+  asset_file := prompt_for_file("Please enter the file path of the asset csv: ")
 
   // read ALL of both files. Header at index 0
   lease_reader := csv.NewReader(lease_file)
@@ -61,18 +58,47 @@ func main() {
   // create map with known column headings to compare
   // Asset List:Lease List = {
   // "LOCATION"
-  // "ASSETNUM":"Mfr. serial number" (full serial <-> full serial)
+  // "ASSETNUM":"MACH_SER_NUM" (full serial <-> full serial)
   // }
+  // c2i = "columns to index"
+  c2i := make(map[string]int,3)
+  for k,v := range(assets[0]){
+    if(v=="LOCATION" || v=="ASSETNUM" || v=="MACH_SER_NUM"){
+      c2i[v]=k
+    }
+  }
 
   // create map of len(lease list) to store locations
+  loc_map := make(map[string]string, len(leases)-1)
 
-  // read all lines in from both 
+  // for each serial in lease list, search for it in asset list
+  // if lease serial HasSuffix asset serial:
+  // add lease serial and asset location to map
+  // remove index of asset list to avoid repetition in search
 
+
+  fmt.Printf("There are %d assets in the lease list",len(leases))
   // for each serial in lease list, search asset list
+  for _,lease_row := range(leases[1:]){
+    fmt.Printf("This asset has serial number %s\n",lease_row[c2i["MACH_SER_NUM"]])
+    
+    for i:=1;i<len(assets);i++{
+      fmt.Printf("Lease: %s\tAsset %s\n",lease_row[c2i["MACH_SER_NUM"]],assets[i][c2i["ASSETNUM"]])
+      // if found, get LOCATION, store as string in map, continue
+      // else mark "N/A" in map
+      // if strings.HasSuffix(lease_row[c2i["MACH_SER_NUM"]],assets[i][c2i["ASSETNUM"]]) {
+      //   loc_map[lease_row[c2i["MACH_SER_NUM"]]]=assets[i][c2i["LOCATION"]]
+      //   fmt.Printf("Location for asset %s set to %s\n",lease_row[c2i["MACH_SER_NUM"]],assets[i][c2i["LOCATION"]])
+      //   remove(assets,i)
+      // }
+    }
+  }
 
-  // if found, get LOCATION, store as string in map, continue,  
+  fmt.Printf("%d items in original lease listing", len(leases))
+  fmt.Printf("%d items in the location listing",len(loc_map))
+  for k,v := range(loc_map){
+    fmt.Printf("%s : %s\n",k,v)
+  }
 
-  // else mark "N/A" in map
-
-
+  // write new CSV with serial number and location
 }
