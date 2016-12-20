@@ -5,7 +5,7 @@ import (
   "log"
   "encoding/csv"
   "os"
-//  "strings"
+  "strings"
 )
 
 // remove index from slice by swapping element i with last index,
@@ -36,6 +36,9 @@ func main() {
     location string
     full_serial string
   }
+  type ColIndex struct {
+    L_SER, A_SER, A_LOC int
+  }
   // get lease list
   lease_file := prompt_for_file("Please enter the file path of the lease csv: ")
   asset_file := prompt_for_file("Please enter the file path of the asset csv: ")
@@ -61,12 +64,14 @@ func main() {
   // "ASSETNUM":"MACH_SER_NUM" (full serial <-> full serial)
   // }
   // c2i = "columns to index"
+  
   c2i := make(map[string]int,3)
   for k,v := range(assets[0]){
     if(v=="LOCATION" || v=="ASSETNUM" || v=="MACH_SER_NUM"){
       c2i[v]=k
     }
   }
+  ci := ColIndex{5,0,33}
 
   // create map of len(lease list) to store locations
   loc_map := make(map[string]string, len(leases)-1)
@@ -77,28 +82,44 @@ func main() {
   // remove index of asset list to avoid repetition in search
 
 
-  fmt.Printf("There are %d assets in the lease list",len(leases))
+  fmt.Printf("There are %d assets in the lease list\n\n",len(leases))
   // for each serial in lease list, search asset list
   for _,lease_row := range(leases[1:]){
-    fmt.Printf("This asset has serial number %s\n",lease_row[c2i["MACH_SER_NUM"]])
+    var LR_SERIAL string
+    LR_SERIAL = lease_row[ci.L_SER]
+    // fmt.Printf("This asset has serial number %s\n",LR_SERIAL)
     
     for i:=1;i<len(assets);i++{
-      fmt.Printf("Lease: %s\tAsset %s\n",lease_row[c2i["MACH_SER_NUM"]],assets[i][c2i["ASSETNUM"]])
+      // fmt.Printf("Lease: %s\tAsset %s\n",LR_SERIAL,assets[i][ci.A_SER])
       // if found, get LOCATION, store as string in map, continue
       // else mark "N/A" in map
-      // if strings.HasSuffix(lease_row[c2i["MACH_SER_NUM"]],assets[i][c2i["ASSETNUM"]]) {
-      //   loc_map[lease_row[c2i["MACH_SER_NUM"]]]=assets[i][c2i["LOCATION"]]
-      //   fmt.Printf("Location for asset %s set to %s\n",lease_row[c2i["MACH_SER_NUM"]],assets[i][c2i["LOCATION"]])
-      //   remove(assets,i)
-      // }
+      if strings.HasSuffix(assets[i][ci.A_SER],LR_SERIAL) {
+        loc_map[LR_SERIAL]=assets[i][ci.A_LOC]
+        // fmt.Printf("Location for asset %s set to %s\n",LR_SERIAL,assets[i][ci.A_LOC])
+        remove(assets,i)
+        continue
+      } 
     }
+        
+    if val,ok := loc_map[LR_SERIAL]; !ok || strings.TrimSpace(val) == ""{
+      // fmt.Printf("No value found at key %s\n",LR_SERIAL)
+      loc_map[LR_SERIAL]="N/A"
+    }
+    
   }
 
-  fmt.Printf("%d items in original lease listing", len(leases))
-  fmt.Printf("%d items in the location listing",len(loc_map))
+  fmt.Printf("%d items in original lease listing\n", len(leases)-1)
+  fmt.Printf("%d items in the location listing\n",len(loc_map))
   for k,v := range(loc_map){
     fmt.Printf("%s : %s\n",k,v)
   }
 
   // write new CSV with serial number and location
+  // var conf_to_csv string
+  // fmt.Println("Would you like to export to csv? [Y/n]")
+  // _, err := fmt.Scanln(&conf_to_csv)
+  // if conf_to_csv == "n" {
+  //   log.Fatal("\nAll done!")
+  // }
+  
 }
