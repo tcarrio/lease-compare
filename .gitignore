@@ -1,3 +1,5 @@
 *.csv
 DOCS.md
 *.exe
+compare
+!*.go
